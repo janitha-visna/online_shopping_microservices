@@ -69,14 +69,20 @@ module.exports.FormateData = (data) => {
 //create a channel
 
 module.exports.CreateChannel = async () => {
-  try {
-    const connection = await amqplib.connect(MESSAGE_BROKER_URL);
-    const channel = await connection.createChannel();
-    await channel.assertExchange(EXCHANGE_NAME, "direct", false);
+  const retryDelay = 5000;
 
-    return channel;
-  } catch (err) {
-    throw err;
+  while (true) {
+    try {
+      const connection = await amqplib.connect(MESSAGE_BROKER_URL);
+      const channel = await connection.createChannel();
+      await channel.assertExchange(EXCHANGE_NAME, "direct", false);
+
+      return channel;
+    } catch (err) {
+      console.error("Failed to connect to RabbitMQ:", err.message);
+      console.log(`Retrying in ${retryDelay / 1000} seconds...`);
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    }
   }
 };
 //publish message
